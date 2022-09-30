@@ -1,4 +1,4 @@
-# foregroundRemoval
+# Foreground Removal Algorithm
 
 This is an attempt to develope in C++ a foreground removal algorithm that I condded in Python. It is not ready yet.
 
