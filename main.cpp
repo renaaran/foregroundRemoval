@@ -14,7 +14,7 @@ namespace fs = std::experimental::filesystem;
 
 std::vector<Image::ImagePtr> images;
 
-void load_images(const std::string &path) {
+void loadImages(const std::string &path) {
 	for (const auto & entry : fs::directory_iterator(path)) {
 		if (entry.path().extension().compare(".jpg") == 0 ||
 		    entry.path().extension().compare(".png") == 0) {
@@ -25,7 +25,7 @@ void load_images(const std::string &path) {
 			}
 			printf("(h=%d,w=%d) - %s\n",
 				image.rows, image.cols, entry.path().c_str());
-			Image::ImagePtr img = std::make_unique<RGBImage>(image);
+			Image::ImagePtr rgbImg = std::make_unique<RGBImage>(image);
 			if (images.size() > 0) {
 				if (images[0]->getCols() != image.cols && images[0]->getRows() != image.rows) {
 					std::stringstream err;
@@ -35,10 +35,18 @@ void load_images(const std::string &path) {
 					throw std::runtime_error(err.str());
 				}
 			}
-			images.push_back(std::move(img));
-			// if (images.size() == 50) return;
+			images.push_back(std::move(rgbImg));
+			if (images.size() == 100) return;
 		}
 	}
+}
+
+void showImage(cv::Mat &image) {
+	std::string windowName = "Result Image";
+ 	cv::namedWindow(windowName);
+ 	cv::imshow(windowName, image);
+ 	cv::waitKey(0);
+ 	cv::destroyWindow(windowName);
 }
 
 int main(int argc, char** argv)
@@ -48,11 +56,16 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	load_images(argv[1]);
-	// std::this_thread::sleep_for(std::chrono::seconds(60));
+	loadImages(argv[1]);
 
-	Algorithm<Image::ImagePtr> *algo = new ForegroundRemove{images};
+    int cols = images[0]->getCols();
+    int rows = images[0]->getRows();
+	Image::ImagePtr buf = std::make_unique<RGBImage>(cols, rows);
+	Algorithm<Image::ImagePtr> *algo = new ForegroundRemove{images, std::move(buf)};
 	algo->execute();
-	Image::ImagePtr res = algo->getResult();
+	auto resultImage = algo->getResult();
+	cv::imwrite("backg_removed.jpg", resultImage->getCv2());
+	showImage(resultImage->getCv2());
+
 	return 0;
 }

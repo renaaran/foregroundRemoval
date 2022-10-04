@@ -39,10 +39,11 @@ def calc_fittest_backg_pixel(X:np.array, thresh:float = 0.5,
             best_inliers = num_inliers
         n += 1
 
-    for _ in range(num_steps):
-        x_inliers = X[bigger_inliers]
-        x_mean = np.mean(x_inliers, axis=0)
-        bigger_inliers = np.linalg.norm(X-x_mean, axis=1) < thresh
+    x_inliers = X[bigger_inliers]
+    # for _ in range(num_steps):
+    #     x_inliers = X[bigger_inliers]
+    #     x_mean = np.mean(x_inliers, axis=0)
+    #     bigger_inliers = np.linalg.norm(X-x_mean, axis=1) < thresh
 
     return np.mean(x_inliers, axis=0)
 
