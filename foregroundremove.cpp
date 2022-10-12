@@ -1,25 +1,26 @@
 #include "foregroundremove.hpp"
 
 #include <cstdlib>
+#include <vector>
 #include <cmath>
 
 /**
  * @brief Return the index of the inlier pixels
  * @return std::vector<int> the index of the inliers
  */
-std::vector<int> ForegroundRemove::getInliers(Image::PixelPtr pixelBuffer,
-    int pixelSize, int bufSize, int selectedindex, float threshold) {
-    Image::PixelPtr pixelSelected = &pixelBuffer[selectedindex*pixelSize];
+std::vector<int> ForegroundRemove::getInliers(std::vector<Image::PixelType>& pixelBuffer,
+    int selectedindex, float threshold) {
+    Image::PixelType pixelSelected = pixelBuffer[selectedindex];
     std::vector<int> inliers;
-    for (int i = 0; i < bufSize; i+=pixelSize) {
+    for (uint i = 0; i < pixelBuffer.size(); i++) {
         // calc the Frobenius norm
         float norm = 0.0;
-        for (int j = 0; j < pixelSize; j++) {
-            int x = pixelBuffer[i+j]-pixelSelected[j];
+        for (uint j = 0; j < pixelSelected.size(); j++) {
+            int x = pixelBuffer[i][j]-pixelSelected[j];
             norm += x*x;
         }
         if (sqrt(norm) < threshold) {
-            inliers.push_back(i/pixelSize);
+            inliers.push_back(i);
         }
     }
 
@@ -27,24 +28,21 @@ std::vector<int> ForegroundRemove::getInliers(Image::PixelPtr pixelBuffer,
 }
 
 std::vector<int> ForegroundRemove::getBestInliers(const int col, const int row) {
-    int channels = sourceImages[0]->getChannels();
-    int pixelSize = sizeof(Image::PixelType)*channels;
-    int bufSize = pixelSize*sourceImages.size();
-    std::unique_ptr<Image::PixelType[]> buf(new Image::PixelType[bufSize]);
+    //int channels = sourceImages[0]->getChannels();
+    std::vector<Image::PixelType> buf;
 
     // copy vector of row pixels from volume to buffer
     for (int i = 0; i < sourceImages.size(); i++) {
-        Image::PixelPtr p = sourceImages[i]->getPixelAt(col, row);
-        std::memcpy(&buf[pixelSize*i], p, pixelSize);
+        buf.emplace_back(sourceImages[i]->getPixelAt(col, row));
     }
 
     int selectedindex = rand()%sourceImages.size();
-    auto inliers = getInliers(&buf[0], pixelSize, bufSize, selectedindex, 0.5);
+    auto inliers = getInliers(buf, selectedindex);
 
     return inliers;
 }
 
-std::unique_ptr<Image::PixelType[]> ForegroundRemove::calcFittestBackgroudPixel(
+Image::PixelType ForegroundRemove::calcFittestBackgroudPixel(
     const int col, const int row, int minInliers) {
     const int MAX_ATTEMPT = 10;
     std::vector<int> bestInliers;
@@ -59,19 +57,18 @@ std::unique_ptr<Image::PixelType[]> ForegroundRemove::calcFittestBackgroudPixel(
 
     // sum the pixels value per channel
     int channels = sourceImages[0]->getChannels();
-    int pixelSize = sizeof(Image::PixelType)*channels;
-    std::unique_ptr<float[]> tmp(new float[pixelSize]{});
+    std::vector<float> tmp(channels);
     for (auto i: bestInliers) {
-        Image::PixelPtr img_pixel = sourceImages[i]->getPixelAt(col, row);
+        Image::PixelType img_pixel = sourceImages[i]->getPixelAt(col, row);
         for (int j = 0; j < channels; j++) {
             tmp[j] += img_pixel[j];
         }
     }
 
     // calculate the mean pixel value
-    std::unique_ptr<Image::PixelType[]> mean_pixel(new Image::PixelType[channels]);
+    Image::PixelType mean_pixel(channels);
     for (int i = 0; i < channels; i++) {
-        mean_pixel[i] = static_cast<Image::PixelType>(tmp[i]/bestInliers.size());
+        mean_pixel[i] = tmp[i]/bestInliers.size();
     }
 
     return mean_pixel;
@@ -84,7 +81,7 @@ void ForegroundRemove::execute() {
         printf("row=%d\n", row);
         for (int col = 0; col < cols; col++) {
             auto pixel = calcFittestBackgroudPixel(col, row);
-            resultImage->setPixelAt(col, row, pixel.get());
+            resultImage->setPixelAt(col, row, pixel);
         }
     }
 }

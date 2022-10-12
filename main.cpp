@@ -9,6 +9,7 @@
 
 #include "rgbimage.hpp"
 #include  "foregroundremove.hpp"
+#include  "foregroundremoveparallel.hpp"
 
 namespace fs = std::experimental::filesystem;
 
@@ -36,7 +37,7 @@ void loadImages(const std::string &path) {
 				}
 			}
 			images.push_back(std::move(rgbImg));
-			if (images.size() == 100) return;
+			// if (images.size() == 100) return;
 		}
 	}
 }
@@ -61,11 +62,10 @@ int main(int argc, char** argv)
     int cols = images[0]->getCols();
     int rows = images[0]->getRows();
 	Image::ImagePtr buf = std::make_unique<RGBImage>(cols, rows);
-	Algorithm<Image::ImagePtr> *algo = new ForegroundRemove{images, std::move(buf)};
+	Algorithm<Image::ImagePtr> *algo = new ForegroundRemoveParallel{images, std::move(buf)};
 	algo->execute();
-	auto resultImage = algo->getResult();
-	cv::imwrite("backg_removed.jpg", resultImage->getCv2());
-	showImage(resultImage->getCv2());
-
+	auto sptr = algo->getResult();
+	RGBImage* resultImage = static_cast<RGBImage*>(&(*sptr));
+	cv::imwrite("./foreground_remove_result.jpg", resultImage->getCv2());
 	return 0;
 }
