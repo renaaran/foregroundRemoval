@@ -8,4 +8,5 @@ Next steps:
 
 - [x] Finish to code the second part of `calcFittestBackgroudPixel`.
 - [x] Add write capability to the Image class.
-- [ ] Add concurrency to the `calcFittestBackgroudPixel` method. That should be easy as every pixel in the generated image caon b4e caulculated independently.
+- [x] Add parallelism to the `calcFittestBackgroudPixel` method. This should be easy, as each pixel in the generated image can be independently calculated.
+- [ ] Add parallelism with CUDA.
